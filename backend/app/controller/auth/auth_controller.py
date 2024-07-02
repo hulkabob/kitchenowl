@@ -1,5 +1,4 @@
-from datetime import datetime
-import re
+from datetime import datetime, timezone
 import uuid
 import gevent
 
@@ -24,7 +23,7 @@ def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload["jti"]
     token = Token.find_by_jti(jti)
     if token is not None:
-        token.last_used_at = datetime.utcnow()
+        token.last_used_at = datetime.now(timezone.utc)
         token.save()
 
     return token is None
@@ -68,7 +67,13 @@ def login(args):
     # Create first access token
     accesssToken, _ = Token.create_access_token(user, refreshModel)
 
-    return jsonify({"access_token": accesssToken, "refresh_token": refreshToken})
+    return jsonify(
+        {
+            "access_token": accesssToken,
+            "refresh_token": refreshToken,
+            "user": user.obj_to_dict(),
+        }
+    )
 
 
 if OPEN_REGISTRATION:
@@ -92,7 +97,11 @@ if OPEN_REGISTRATION:
             email=args["email"] if "email" in args else None,
         )
         if "email" in args and mail.mailConfigured():
-            gevent.spawn(mail.sendVerificationMail, user.id, ChallengeMailVerify.create_challenge(user))
+            gevent.spawn(
+                mail.sendVerificationMail,
+                user.id,
+                ChallengeMailVerify.create_challenge(user),
+            )
 
         device = "Unkown"
         if "device" in args:
@@ -104,7 +113,13 @@ if OPEN_REGISTRATION:
         # Create first access token
         accesssToken, _ = Token.create_access_token(user, refreshModel)
 
-        return jsonify({"access_token": accesssToken, "refresh_token": refreshToken})
+        return jsonify(
+            {
+                "access_token": accesssToken,
+                "refresh_token": refreshToken,
+                "user": user.obj_to_dict(),
+            }
+        )
 
 
 @auth.route("/refresh", methods=["GET"])
@@ -113,7 +128,7 @@ def refresh():
     user = current_user
     if not user:
         raise UnauthorizedRequest(
-            message="Unauthorized: IP {} refresh attemp with wrong username or password".format(
+            message="Unauthorized: IP {} refresh could not get current user".format(
                 request.remote_addr
             )
         )
@@ -127,7 +142,13 @@ def refresh():
     # Create access token
     accesssToken, _ = Token.create_access_token(user, refreshModel)
 
-    return jsonify({"access_token": accesssToken, "refresh_token": refreshToken})
+    return jsonify(
+        {
+            "access_token": accesssToken,
+            "refresh_token": refreshToken,
+            "user": user.obj_to_dict(),
+        }
+    )
 
 
 @auth.route("", methods=["DELETE"])
@@ -271,7 +292,7 @@ if FRONT_URL and len(oidc_clients) > 0:
                 "code": args["code"],
                 "redirect_uri": oidc_request.redirect_uri,
             },
-            authn_method="client_secret_basic",
+            authn_method="client_secret_post",
         )
         if isinstance(tokenResponse, ErrorResponse):
             oidc_request.delete()
@@ -331,13 +352,15 @@ if FRONT_URL and len(oidc_clients) > 0:
                         username = uuid.uuid4().hex
             newUser = User(
                 username=username,
-                name=userinfo["name"].strip()
-                if "name" in userinfo
-                else userinfo["sub"],
+                name=(
+                    userinfo["name"].strip() if "name" in userinfo else userinfo["sub"]
+                ),
                 email=userinfo["email"].strip() if "email" in userinfo else None,
-                email_verified=userinfo["email_verified"]
-                if "email_verified" in userinfo
-                else False,
+                email_verified=(
+                    userinfo["email_verified"]
+                    if "email_verified" in userinfo
+                    else False
+                ),
                 photo=userinfo["picture"] if "picture" in userinfo else None,
             ).save()
             oidcLink = OIDCLink(

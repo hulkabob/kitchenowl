@@ -177,26 +177,28 @@ class ShoppinglistCubit extends Cubit<ShoppinglistCubitState> {
         _state.selectedListItems.isEmpty) {
       return;
     }
+    final selectedItems = _state.selectedListItems
+        .sorted((a, b) => a.id?.compareTo(b.id ?? 0) ?? -1);
     final l = List.of(_state.listItems);
-    l.removeWhere(_state.selectedListItems.contains);
+    l.removeWhere(selectedItems.contains);
     final recent = List.of(_state.recentItems);
-    recent.insertAll(0, _state.selectedListItems);
+    recent.insertAll(
+      0,
+      selectedItems.map((e) => ItemWithDescription.fromItem(item: e)),
+    );
     if (recent.length > recentItemCountProvider()) {
       recent.removeRange(recentItemCountProvider(), recent.length);
     }
 
     if (_state is SearchShoppinglistCubitState) {
       final result = List.of(_state.result);
-      for (final item in _state.selectedListItems) {
+      for (final item in selectedItems) {
         final index = result.indexOf(item);
         if (index >= 0) {
           result.removeAt(index);
           result.insert(
             index,
-            ItemWithDescription.fromItem(
-              item: item,
-              description: item.description,
-            ),
+            ItemWithDescription.fromItem(item: item),
           );
         }
       }
@@ -213,7 +215,7 @@ class ShoppinglistCubit extends Cubit<ShoppinglistCubitState> {
     if (!await TransactionHandler.getInstance()
         .runTransaction(TransactionShoppingListDeleteItems(
       shoppinglist: _state.selectedShoppinglist!,
-      items: _state.selectedListItems,
+      items: selectedItems,
     ))) {
       await refresh();
     }
@@ -361,7 +363,7 @@ class ShoppinglistCubit extends Cubit<ShoppinglistCubitState> {
     if (query != null && query.isNotEmpty) {
       // Split query into name and description
       final splitIndex = query.indexOf(',');
-      String queryName = query;
+      String queryName = query.trim();
       String? queryDescription;
       if (splitIndex >= 0) {
         queryName = query.substring(0, splitIndex).trim();
@@ -387,7 +389,8 @@ class ShoppinglistCubit extends Cubit<ShoppinglistCubitState> {
 
       _mergeShoppinglistItems(loadedItems, loadedShoppinglistItems);
       if (loadedItems.isEmpty ||
-          loadedItems[0].name.toLowerCase() != queryName.toLowerCase()) {
+          !loadedItems
+              .any((e) => e.name.toLowerCase() == queryName.toLowerCase())) {
         loadedItems.add(ItemWithDescription(
           name: queryName,
           description: queryDescription ?? '',

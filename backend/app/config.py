@@ -33,7 +33,7 @@ import os
 
 
 MIN_FRONTEND_VERSION = 71
-BACKEND_VERSION = 93
+BACKEND_VERSION = 96
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(APP_DIR)
@@ -55,6 +55,7 @@ DB_URL = URL.create(
     username=os.getenv("DB_USER"),
     password=os.getenv("DB_PASSWORD"),
     host=os.getenv("DB_HOST"),
+    port=os.getenv("DB_PORT"),
     database=os.getenv("DB_NAME", STORAGE_PATH + "/database.db"),
 )
 MESSAGE_BROKER = os.getenv("MESSAGE_BROKER")
@@ -76,6 +77,7 @@ SUPPORTED_LANGUAGES = {
     "en": "English",
     "en_AU": "Australian English",
     "bn": "বাংলা",
+    "ca": "Catalan",
     "cs": "čeština",
     "da": "Dansk",
     "de": "Deutsch",
@@ -84,17 +86,21 @@ SUPPORTED_LANGUAGES = {
     "es": "Español",
     "fi": "Suomi",
     "fr": "Français",
+    "he": "עִבְרִית‎",
     "hu": "Magyar nyelv",
     "id": "Bahasa Indonesia",
     "it": "Italiano",
+    "ko": "한국어",
+    "lt": "Lietuvių kalba",
     "nb_NO": "Bokmål",
     "nl": "Nederlands",
     "pl": "Polski",
     "pt": "Português",
     "pt_BR": "Português Brasileiro",
-    "ru": "русский язык",
+    "ru": "Русский язык",
     "sv": "Svenska",
     "tr": "Türkçe",
+    "uk": "Українська",
     "zh_Hans": "简化字",
 }
 
